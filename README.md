@@ -17,7 +17,7 @@ It provides a seamless workflow for both users downloading their own profiles vi
 * **Admin Dashboard:** A protected `/admin/status` page for authorized users to view and filter a complete history of issued tokens.
 * **CLI and Browser Flows:** Supports both a fully automated CLI client and a user-friendly, browser-based download flow.
 * **Automated Deployments:** Includes a comprehensive Helm chart for easy, configurable, and repeatable deployments, including automated database migrations via Helm Hooks.
-* **Test Suite:** A thorough `pytest` suite provides high confidence in the application's functionality, security, and robustness.
+* **Test Suite:** A thorough `pytest` suite provides high confidence in the application's functionality, security, and robustness. Please see later in this file for the recognised testing exclusions.
 
 ## Technology Stack
 
@@ -100,6 +100,14 @@ The application is designed to be deployed using the included Helm chart.
       -f values-prod.yaml \
       --set secrets.oidc.clientSecret=<your-secret>
     ```
+
+## Testing Strategy
+
+This project uses `pytest` and the `pytest-cov` plugin to maintain high code quality and test coverage. The goal is to ensure all core business logic, models, and routes are thoroughly tested.
+
+### Accepted Coverage Exclusions
+
+* **`server/logging.py`**: This file contains a custom logger class used exclusively by the Gunicorn production server to filter health check probes from the access logs. As our test suite runs the application with Werkzeug's test server, this code is not executed during tests. Its logic is simple and has been verified through manual inspection and by observing the logs in a live deployment environment. It is therefore intentionally excluded from the coverage report.
 
 ## Authorship and Origin
 
