@@ -83,3 +83,22 @@ def test_download_expired_token(client, app, mocker):
     response = client.get('/download?token=expired-token')
     assert response.status_code == 403
     assert b"Access Forbidden" in response.data
+
+def test_error_page_is_rendered_on_auth_exception(client, mocker):
+    """
+    Tests that a generic exception during the auth process correctly
+    redirects to the user-facing error page.
+    """
+    OIDC_CLIENT_PATH = 'server.extensions.oauth.oidc'
+    
+    # Mock the OIDC client to raise a generic exception
+    mock_authorize_access_token = mocker.patch(f'{OIDC_CLIENT_PATH}.authorize_access_token')
+    mock_authorize_access_token.side_effect = Exception("A generic error occurred")
+
+    # Call the /auth endpoint, which should now fail and redirect
+    response = client.get('/auth', follow_redirects=True)
+    
+    # Assert we landed on the error page with the correct content and status
+    assert response.status_code == 400
+    assert b"<h1>Error</h1>" in response.data
+    assert b"Authentication failed." in response.data # Check for the message we passed
