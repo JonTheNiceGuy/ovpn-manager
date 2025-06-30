@@ -22,8 +22,8 @@ def test_download_flow(client, app, mocker):
 
     with app.app_context():
         token_record = db.session.query(DownloadToken).filter_by(token=token_str).first()
-        assert token_record.collected is True
-        assert token_record.ovpn_content is None
+        assert token_record.collected is True # type: ignore
+        assert token_record.ovpn_content is None # type: ignore
 
     second_download_response = client.get(f'/download?token={token_str}')
     assert second_download_response.status_code == 403
