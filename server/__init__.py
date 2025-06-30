@@ -1,7 +1,8 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, request, render_template
 from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import timedelta
+import logging
 
 from .extensions import db, migrate, oauth, limiter, talisman, sess
 from .models import DownloadToken
@@ -11,8 +12,20 @@ from .admin import admin_bp
 from .tasks import tasks_bp
 from .utils import load_ovpn_templates
 
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record):
+        # Werkzeug logs requests with this message format
+        # Check if the log message is a GET /healthz request
+        if 'GET /healthz' in record.getMessage():
+            return False # Returning False drops the log record
+        return True
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
+
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.addFilter(HealthCheckFilter())
+
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     
     # --- Load Configuration ---

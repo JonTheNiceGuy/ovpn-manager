@@ -10,6 +10,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 import tempfile
+import logging
 
 @pytest.fixture(scope='session')
 def app(test_ca, tmp_path_factory):
@@ -35,6 +36,10 @@ def app(test_ca, tmp_path_factory):
 
     app = create_app()
     app.config.update({"TESTING": True})
+
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.INFO)
+    werkzeug_logger.propagate = True # This ensures messages go to the root logger
 
     with app.app_context():
         _db.create_all()
