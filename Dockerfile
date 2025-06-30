@@ -9,7 +9,7 @@ RUN apt-get update && \
 WORKDIR /usr/src/app
 
 COPY server/requirements.txt .
-RUN pip wheel --break-system-packages --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
+RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
 
 FROM ${IMAGE_REPO}:${IMAGE_TAG}
 
