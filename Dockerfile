@@ -9,7 +9,7 @@ RUN apt-get update && \
 WORKDIR /usr/src/app
 
 COPY server/requirements.txt .
-RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
+RUN pip wheel --break-system-packages --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
 
 FROM ${IMAGE_REPO}:${IMAGE_TAG}
 
@@ -30,7 +30,7 @@ WORKDIR /usr/src/app
 COPY --from=builder /usr/src/app/wheels /wheels
 
 # Install the dependencies from the wheels
-RUN pip install --no-cache /wheels/*
+RUN pip install --break-system-packages --no-cache /wheels/*
 
 # Copy the application code
 COPY server/ ./server/
