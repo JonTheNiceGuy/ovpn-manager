@@ -5,6 +5,10 @@ omit =
     */extensions.py
     */models.py
     */migrations/*
+    # Exclude the Gunicorn-specific logger, which is only used in a live
+    # deployment and is not executed by the pytest environment. This is an
+    # accepted and documented testing gap.
+    server/logging.py
 
 [report]
 show_missing = True
