@@ -2,6 +2,7 @@ from urllib.parse import urlparse
 from server.models import DownloadToken
 from server.extensions import db
 from flask import redirect
+from authlib.common.errors import AuthlibBaseError
 
 OIDC_CLIENT_PATH = 'server.extensions.oauth.oidc'
 
@@ -74,3 +75,29 @@ def test_rate_limiter_blocks_excessive_requests(client, mocker):
         response = client.get('/login')
         assert response.status_code == 429
         assert b"Too Many Requests" in response.data
+
+def test_login_fails_gracefully_on_authlib_error(app, client, mocker):
+    """
+    Tests that the user is gracefully redirected to an error page if authlib
+    itself raises an exception during the redirect process.
+    """
+    # In testing mode, Flask propagates exceptions instead of letting its error
+    # handlers process them. For this one test, we want to test the error
+    # handler, so we temporarily disable exception propagation.
+    app.config['PROPAGATE_EXCEPTIONS'] = False
+
+    # 1. Mock authorize_redirect to raise a library-specific error
+    mocker.patch(
+        f'{OIDC_CLIENT_PATH}.authorize_redirect',
+        side_effect=AuthlibBaseError(error='Mock OIDC provider misconfiguration')
+    )
+
+    # 2. The user attempts to log in. The app should catch the exception
+    #    and redirect to our friendly error page.
+    response = client.get('/login', follow_redirects=True)
+    
+    # 3. Assert they land on our friendly error page with a 400 code
+    assert response.status_code == 500
+    assert b"Internal Server Error" in response.data
+    
+    app.config['PROPAGATE_EXCEPTIONS'] = True
