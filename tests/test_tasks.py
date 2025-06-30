@@ -1,6 +1,7 @@
 from server.extensions import db
 from server.models import DownloadToken
 from datetime import datetime, timezone, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 def test_cleanup_tokens_task(client, app):
     """
@@ -49,3 +50,21 @@ def test_cleanup_tokens_task(client, app):
         remaining_token = db.session.query(DownloadToken).first()
         # Assert that only the new token remains
         assert remaining_token.token == "new-token" # type: ignore
+
+def test_cleanup_task_handles_db_error(client, app, mocker):
+    """
+    Tests that the cleanup task correctly handles a database exception.
+    """
+    # Mock the db.session.commit() call to raise an exception
+    mocker.patch('server.extensions.db.session.commit', side_effect=SQLAlchemyError("Mock DB Error"))
+    # We also need to mock rollback so it doesn't also error
+    mock_rollback = mocker.patch('server.extensions.db.session.rollback')
+
+    # Call the cleanup endpoint
+    response = client.post('/tasks/cleanup-tokens')
+    
+    # Assert that the app caught the error and returned a 500 status
+    assert response.status_code == 500
+    assert b"An error occurred during cleanup" in response.data
+    # Assert that a rollback was attempted
+    mock_rollback.assert_called_once()
