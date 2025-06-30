@@ -60,7 +60,7 @@ def test_rate_limiter_blocks_excessive_requests(client, mocker):
     Tests that the rate limiter returns a 429 Too Many Requests error.
     Note: we use a separate app context to have a persistent limiter for the test.
     """
-    mock_authorize_redirect = mocker.patch('server.extensions.oauth.oidc.authorize_redirect')
+    mock_authorize_redirect = mocker.patch(f'{OIDC_CLIENT_PATH}.authorize_redirect')
     mock_authorize_redirect.return_value = redirect("http://fake-oidc-provider.com/auth")
     
     # The test client resets state, so we need to call within one context
