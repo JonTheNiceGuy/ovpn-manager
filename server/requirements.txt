@@ -1,0 +1,14 @@
+Flask
+Authlib
+cryptography
+gunicorn
+Flask-SQLAlchemy
+psycopg2-binary
+requests
+Flask-Limiter
+redis
+Flask-Migrate
+Flask-Talisman
+Jinja2
+Flask-Session[sqlalchemy]
+user-agents

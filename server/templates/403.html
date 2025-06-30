@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Forbidden - OVPN Manager{% endblock %}
+
+{% block content %}
+    <h1>Access Forbidden (403)</h1>
+    <p>You do not have the necessary permissions to access this page.</p>
+    <p><a href="{{ url_for('main.index') }}">Return to Home</a></p>
+{% endblock %}

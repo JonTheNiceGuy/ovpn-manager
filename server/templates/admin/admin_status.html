@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Status - OVPN Manager{% endblock %}
+
+{% block content %}
+    <h1>Token Issuance Status</h1>
+    
+    <form method="GET" action="{{ url_for('admin.status') }}">
+        <label for="filter_by">Filter Status:</label>
+        <select name="filter_by" id="filter_by">
+            <option value="all_records" {% if current_filters.filter_by == 'all_records' %}selected{% endif %}>All Records</option>
+            <option value="downloadable" {% if current_filters.filter_by == 'downloadable' %}selected{% endif %}>Downloadable</option>
+            <option value="collected" {% if current_filters.filter_by == 'collected' %}selected{% endif %}>Collected</option>
+        </select>
+        
+        <label for="time_limit">Filter Time:</label>
+        <select name="time_limit" id="time_limit">
+            <option value="1h" {% if current_filters.time_limit == '1h' %}selected{% endif %}>Last Hour</option>
+            <option value="12h" {% if current_filters.time_limit == '12h' %}selected{% endif %}>Last 12 Hours</option>
+            <option value="1d" {% if current_filters.time_limit == '1d' %}selected{% endif %}>Last Day</option>
+            <option value="1w" {% if current_filters.time_limit == '1w' %}selected{% endif %}>Last Week</option>
+            <option value="1m" {% if current_filters.time_limit == '1m' %}selected{% endif %}>Last Month</option>
+            <option value="expiring" {% if current_filters.time_limit == 'expiring' %}selected{% endif %}>Expiring in 30 Days</option>
+            <option value="all" {% if current_filters.time_limit == 'all' %}selected{% endif %}>All Time</option>
+        </select>
+
+        <button type="submit">Apply Filters</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>User (Sub)</th>
+                <th>Issued At (UTC)</th>
+                <th>Cert CN</th>
+                <th>Cert Expiry (UTC)</th>
+                <th>Requester IP</th>
+                <th>Detected OS</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for token in tokens %}
+            <tr>
+                <td>{{ token.user }}</td>
+                <td>{{ token.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ token.cn }}</td>
+                <td>{{ token.cert_expiry.strftime('%Y-%m-%d %H:%M:%S') if token.cert_expiry else 'N/A' }}</td>
+                <td>{{ token.requester_ip }}</td>
+                <td>{{ token.detected_os or 'Unknown' }}</td>
+                <td>
+                    {% if token.collected %}
+                        Collected
+                    {% elif not token.downloadable %}
+                        Expired
+                    {% else %}
+                        Downloadable
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2em; font-family: sans-serif;">No records found for the selected filter.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

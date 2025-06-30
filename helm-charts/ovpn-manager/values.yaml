@@ -1,0 +1,111 @@
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: your-container-registry/ovpn-manager
+  pullPolicy: Always
+  # Overwrite this to specify a particular version
+  tag: "latest"
+
+database:
+  protocol: "postgresql"
+  hostname: ""
+  username: ""
+  password: ""
+  database: ""
+  port: ""
+  path: /tmp/app.sqlite
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: config.app.example.org
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: config-app-tls
+    #   hosts:
+    #     - config.app.example.org
+
+cleanupJob:
+  enabled: true
+  # Run every 5 minutes
+  schedule: "*/5 * * * *"
+  # Use a minimal image with curl for the job
+  image:
+    repository: "curlimages/curl"
+    tag: "latest"
+  # How long to keep job history
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+
+migrationJob:
+  enabled: true
+
+oidc_admin_group: ovpn_manager_admins
+
+secrets:
+  create: true
+  # Generate with: import random, string; ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(32))
+  flaskSecretKey: "change-this-in-production"
+  # Generate with: from cryptography.fernet import Fernet; Fernet.generate_key().decode()
+  encryptionKey: "change-this-with-a-real-generated-key"
+  oidc:
+    clientId: "your-client-id"
+    clientSecret: "your-client-secret"
+    discoveryUrl: "https://authenticate.app.example.org/.well-known/openid-configuration"
+  ca:
+    key: ""
+    crt: ""
+
+# Resource requests and limits
+resources: {}
+  # We usually recommend to specify resource requests and limits.
+  # Example:
+  #   requests:
+  #     cpu: 100m
+  #     memory: 128Mi
+  #   limits:
+  #     cpu: 500m
+  #     memory: 256Mi
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1001
+
+# Security context for the container
+securityContext:
+  runAsUser: 1001
+  runAsGroup: 1001
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  # capabilities:
+  #   drop:
+  #   - ALL
+
+# Node labels for pod assignment
+nodeSelector: {}
+
+# Tolerations for pod assignment
+tolerations: []
+
+# Affinity for pod assignment
+affinity: {}
+
+templates:
+  mountPath: "/etc/ovpn-templates"
+  # If you already have a templates configMap, or want to define it outside this, then specify it here and define create to false.
+  configMap: ""
+  create: true
+  # Otherwise... let this build them for you!
+  configMapSuffix: "-templates"
+  files: {}

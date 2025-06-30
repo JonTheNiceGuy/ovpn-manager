@@ -1,0 +1,6 @@
+click
+pytest
+pytest-mock
+PyYAML
+platformdirs
+requests

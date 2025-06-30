@@ -1,0 +1,95 @@
+{{- if .Values.migrationJob.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "ovpn-manager.fullname" . }}-migration
+  labels:
+    {{- include "ovpn-manager.labels" . | nindent 4 }}
+  annotations:
+    # This defines the Job as a Helm Hook
+    "helm.sh/hook": "pre-install,pre-upgrade"
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+spec:
+  template:
+    metadata:
+      name: {{ include "ovpn-manager.fullname" . }}-migration
+      labels:
+        {{- include "ovpn-manager.selectorLabels" . | nindent 8 }}
+      annotations:
+        "helm.sh/hook-run-id": {{ randAlphaNum 10 | quote }}
+    spec:
+      restartPolicy: Never
+      # We don't need the extra security contexts of the main app for this one-off job
+      containers:
+        - name: migration
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["flask", "db", "upgrade"]
+          env:
+            - name: OVPN_TEMPLATES_PATH
+              value: {{ .Values.templates.mountPath | quote }}
+            - name: FLASK_APP
+              value: "server:create_app()"
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef: 
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: OIDC_CLIENT_ID
+            - name: OIDC_CLIENT_SECRET
+              valueFrom: 
+                secretKeyRef: 
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: OIDC_CLIENT_SECRET
+            - name: OIDC_DISCOVERY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: OIDC_DISCOVERY_URL
+            - name: FLASK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: FLASK_SECRET_KEY
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: ENCRYPTION_KEY
+            - name: OIDC_ADMIN_GROUP
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: OIDC_ADMIN_GROUP
+            - name: CA_CERT_PATH
+              value: /etc/ca/ca.crt
+            - name: CA_KEY_PATH
+              value: /etc/ca/ca.key
+            {{- if or .Values.database.path (and .Values.database.type .Values.database.username .Values.database.password .Values.database.hostname .Values.database.database) }}
+            - name: DATABASE_URL
+              valueFrom: 
+                secretKeyRef:
+                  name: {{ include "ovpn-manager.fullname" . }}
+                  key: DATABASE_URL
+            {{- end }}
+          volumeMounts:
+            - name: ca-volume
+              mountPath: "/etc/ca"
+              readOnly: true
+            - name: ovpn-templates-volume
+              mountPath: {{ .Values.templates.mountPath }}
+              readOnly: true
+      volumes:
+        - name: ovpn-templates-volume
+          configMap:
+            name: {{ if .Values.templates.configMap }}{{ .Values.templates.configMap }}{{ else }}{{ include "ovpn-manager.fullname" . }}{{ .Values.templates.configMapSuffix }}{{ end }}
+        - name: ca-volume
+          secret:
+            secretName: {{ include "ovpn-manager.fullname" . }}
+            items:
+            - key: ca.crt
+              path: ca.crt
+            - key: ca.key
+              path: ca.key
+  backoffLimit: 1
+{{- end }}

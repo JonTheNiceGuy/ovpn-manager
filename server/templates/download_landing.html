@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Download Starting...{% endblock %}
+
+{% block content %}
+    <meta http-equiv="refresh" content="3;url={{ download_url }}" />
+    <h1>Download Starting...</h1>
+    <p>Your OpenVPN configuration file download is starting.</p>
+    <p><small>If your download does not start automatically, <a href="{{ download_url }}">click here</a>.</small></p>
+{% endblock %}

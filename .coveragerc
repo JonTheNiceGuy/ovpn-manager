@@ -1,0 +1,14 @@
+[run]
+source = server
+omit =
+    */__init__.py
+    */extensions.py
+    */models.py
+    */migrations/*
+
+[report]
+show_missing = True
+skip_covered = True
+
+[html]
+directory = htmlcov

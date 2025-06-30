@@ -1,0 +1,25 @@
+{{- if .Values.cleanupJob.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "ovpn-manager.fullname" . }}-cleanup
+  labels:
+    {{- include "ovpn-manager.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cleanupJob.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup-tokens
+              image: "{{ .Values.cleanupJob.image.repository }}:{{ .Values.cleanupJob.image.tag }}"
+              imagePullPolicy: IfNotPresent
+              args:
+                - "-X"
+                - "POST"
+                - "http://{{ include "ovpn-manager.fullname" . }}:{{ .Values.service.port }}/tasks/cleanup-tokens"
+  successfulJobsHistoryLimit: {{ .Values.cleanupJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.cleanupJob.failedJobsHistoryLimit }}
+{{- end }}
