@@ -23,8 +23,8 @@ class Config:
 
     def __init__(self, server_url_flag, output_flag, overwrite_flag, _user_config_path=None, _system_config_path=None):
         # Allow paths to be injected for testing, otherwise use real paths
-        self.user_config_path = _user_config_path or (Path.home() / ".config" / "ovpn-manager" / "config.yaml")
-        self.system_config_path = _system_config_path or Path("/etc/ovpn-manager/config.yaml")
+        self.user_config_path = _user_config_path if _user_config_path is not None else (Path.home() / ".config" / "ovpn-manager" / "config.yaml")
+        self.system_config_path = _system_config_path if _system_config_path is not None else Path("/etc/ovpn-manager/config.yaml")
         
         self.user_config = self._load_config_file(self.user_config_path)
         self.system_config = self._load_config_file(self.system_config_path)
@@ -45,18 +45,14 @@ class Config:
 
     def _resolve(self, cli_arg, env_var, config_key):
         """Generic resolver that checks CLI > ENV > User > System."""
-        # 1. Command-line flag
         if cli_arg is not None:
             return cli_arg
-        # 2. Environment variable
         if os.getenv(env_var):
             return os.getenv(env_var)
-        # 3. User config file
-        if self.user_config.get(config_key):
-            return self.user_config.get(config_key)
-        # 4. System config file
-        if self.system_config.get(config_key):
-            return self.system_config.get(config_key)
+        if config_key in self.user_config:
+            return self.user_config[config_key]
+        if config_key in self.system_config:
+            return self.system_config[config_key]
         return None
 
     def _resolve_server_url(self, cli_arg):
@@ -105,6 +101,7 @@ class CallbackHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
+        # This section is INCREDIBLY brief as you don't really see it open at all.
         self.wfile.write(b"""
             <html>
             <head><title>Authentication Success</title></head>
