@@ -4,6 +4,7 @@ from cryptography.fernet import Fernet
 from flask import current_app
 from typing import Union, Dict, Any, List
 from .extensions import oauth
+from authlib.oidc.core.claims import UserInfo
 
 def get_fernet():
     """Gets the Fernet instance, creating it if it doesn't exist on the app context."""
@@ -88,24 +89,17 @@ def render_ovpn_template(user_groups, context):
     print(f'For cert: {cn} use {best_template_info["file_name"]}')
     return best_template_info['template'].render(context)
 
-def normalize_userinfo(raw_userinfo: Union[object, Dict[str, Any]]) -> Dict[str, Any]:
+def normalize_userinfo(raw_userinfo: Union[UserInfo, Dict[str, Any]]) -> Dict[str, Any]:
     """
     Takes a raw userinfo object (which supports .get()) and returns a
     clean, consistent dictionary containing only the claims we care about.
     """
-    clean_data: Dict[str, Any] = {}
-    
-    # This list acts as a whitelist for the claims we will process.
-    wanted_keys = [
-        'sub', 'email', 'name', 'first_name', 
-        'given_name', 'family_name', 'organisational_unit', 'groups'
-    ]
-    
-    for key in wanted_keys:
-        value = getattr(raw_userinfo, 'get', lambda k, d=None: d)(key)
-        if value is not None:
-            clean_data[key] = value
+    if os.environ.get('DEBUG_USERINFO'):
+        for key, value in raw_userinfo.items():
+            print(f'userinfo: {key} -> {value}')
 
+    clean_data: Dict[str, Any] = dict(raw_userinfo)
+    
     # Ensure 'groups' key always exists and is a list.
     clean_data['groups'] = clean_data.get('groups') or []
         
