@@ -17,6 +17,9 @@ def create_app():
     
     # --- Load Configuration ---
     app.secret_key = os.getenv("FLASK_SECRET_KEY")
+    app.config["OIDC_ADMIN_GROUP"] = os.getenv("OIDC_ADMIN_GROUP")
+
+    # --- Load Database Settings ---
     db_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(app.instance_path, 'app.db')}")
     if "sqlite" in db_url:
         os.makedirs(app.instance_path, exist_ok=True)
