@@ -57,7 +57,6 @@
             <div class="logo">OVPN Manager</div>
             <nav>
                 <a href="{{ url_for('main.index') }}">Home</a>
-                {# This link only appears if the user is in the configured admin group #}
                 {% if session.get('user') and config.OIDC_ADMIN_GROUP in session['user'].get('groups', []) %}
                     <a href="{{ url_for('admin.index') }}">Admin</a>
                 {% endif %}
