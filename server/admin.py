@@ -1,4 +1,4 @@
-from flask import Blueprint, session, request, render_template, abort, url_for, redirect, current_app
+from flask import Blueprint, session, request, render_template, abort, url_for, redirect, session, current_app
 from functools import wraps
 import os
 from .extensions import db, limiter
@@ -38,8 +38,7 @@ def admin_required(f):
 @admin_required
 def index():
     """Renders the admin index page."""
-    # The template path is relative to the blueprint's 'template_folder'
-    return render_template('admin/index.html')
+    return render_template('admin/index.html', session=session, config=current_app.config)
 
 @admin_bp.route('/status')
 @limiter.limit("60/minute")
@@ -69,4 +68,10 @@ def status():
     tokens = query.order_by(DownloadToken.created_at.desc()).limit(500).all()
     active_filters = {'filter_by': filter_by, 'time_limit': time_limit}
     
-    return render_template('admin/admin_status.html', tokens=tokens, current_filters=active_filters)
+    return render_template(
+        'admin/admin_status.html',
+        tokens=tokens,
+        current_filters=active_filters,
+        session=session,
+        config=current_app.config
+    )

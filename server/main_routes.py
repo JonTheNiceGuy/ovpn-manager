@@ -1,4 +1,4 @@
-from flask import Blueprint, request, abort, Response, render_template_string, render_template, url_for
+from flask import Blueprint, request, abort, Response, render_template_string, render_template, url_for, session, current_app, redirect
 from .extensions import db
 from .models import DownloadToken
 from .utils import get_fernet
@@ -9,7 +9,10 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 def index():
     """Renders the public home page."""
-    return render_template('index.html')
+    if 'user' not in session:
+        session['next_url'] = request.path
+        return redirect(url_for('auth.login'))
+    return render_template('index.html', session=session, config=current_app.config)
 
 @main_bp.route('/download-landing/<token>')
 def download_landing(token):
