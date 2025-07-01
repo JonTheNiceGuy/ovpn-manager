@@ -6,6 +6,36 @@ from unittest.mock import MagicMock
 
 OIDC_CLIENT_PATH = 'server.extensions.oauth.oidc'
 
+def test_index_redirects_unauthenticated_user(client):
+    """
+    Tests that an unauthenticated user hitting the root path (/)
+    is correctly redirected to the login page.
+    """
+    response = client.get('/')
+    
+    # Assert that the response is a redirect
+    assert response.status_code == 302
+    # Assert that it redirects to the correct login URL
+    assert response.location == '/login'
+
+def test_index_page_loads_for_authenticated_user(client):
+    """
+    Tests that the public index page loads successfully FOR AN AUTHENTICATED USER.
+    """
+    # Use session_transaction to manually create a session cookie
+    with client.session_transaction() as sess:
+        sess['user'] = {'sub': 'test|user', 'groups': []}
+
+    # Now, make the request. The test client will automatically send
+    # the cookie with our mocked session data.
+    response = client.get('/')
+
+    # Assert that we now get a 200 OK and see the page content
+    assert response.status_code == 200
+    assert b"<h1>OVPN Manager</h1>" in response.data
+    assert b"Please use the client or an authorized link to download your configuration." in response.data
+    assert b"<a href=\"/login\">Login to get a new OVPN profile</a></p>" in response.data
+
 def test_download_flow(client, app, mocker):
     """Tests the full successful download flow and state change."""
     mock_authorize_access_token = mocker.patch(f'{OIDC_CLIENT_PATH}.authorize_access_token')
@@ -43,14 +73,6 @@ def test_security_headers_are_present(client):
     assert response.headers['X-Frame-Options'] == 'SAMEORIGIN'
     # Check for MIME-type sniffing protection
     assert response.headers['X-Content-Type-Options'] == 'nosniff'
-
-def test_index_page(client):
-    """Tests that the public index page loads."""
-    response = client.get('/')
-    assert response.status_code == 200
-    assert b"<h1>OVPN Manager</h1>" in response.data
-    assert b"Please use the client or an authorized link to download your configuration." in response.data
-    assert b"<a href=\"/login\">Login to get a new OVPN profile</a></p>" in response.data
 
 def test_download_landing_page(client, mocker):
     """Tests that the download landing page renders correctly."""
