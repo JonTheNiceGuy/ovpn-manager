@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "ovpn-manager.fullname" . }}-migration
+  name: job-migration-{{ include "ovpn-manager.fullname" . }}
   labels:
     {{- include "ovpn-manager.labels" . | nindent 4 }}
   annotations:
@@ -13,7 +13,7 @@ metadata:
 spec:
   template:
     metadata:
-      name: {{ include "ovpn-manager.fullname" . }}-migration
+      name: job-migration-{{ include "ovpn-manager.fullname" . }}
       labels:
         {{- include "ovpn-manager.selectorLabels" . | nindent 8 }}
       annotations:
@@ -29,6 +29,8 @@ spec:
           env:
             - name: OVPN_TEMPLATES_PATH
               value: {{ .Values.templates.mountPath | quote }}
+            - name: OVPN_OPTIONSETS_PATH
+              value: {{ .Values.optionsets.mountPath | quote }}
             - name: FLASK_APP
               value: "server:create_app()"
             - name: OIDC_CLIENT_ID
@@ -79,10 +81,16 @@ spec:
             - name: ovpn-templates-volume
               mountPath: {{ .Values.templates.mountPath }}
               readOnly: true
+            - name: ovpn-optionsets-volume
+              mountPath: {{ .Values.optionsets.mountPath }}
+              readOnly: true
       volumes:
         - name: ovpn-templates-volume
           configMap:
             name: {{ if .Values.templates.configMap }}{{ .Values.templates.configMap }}{{ else }}{{ include "ovpn-manager.fullname" . }}{{ .Values.templates.configMapSuffix }}{{ end }}
+        - name: ovpn-optionsets-volume
+          configMap:
+            name: {{ if .Values.optionsets.configMap }}{{ .Values.optionsets.configMap }}{{ else }}{{ include "ovpn-manager.fullname" . }}{{ .Values.optionsets.configMapSuffix }}{{ end }}
         - name: ca-volume
           secret:
             secretName: {{ include "ovpn-manager.fullname" . }}

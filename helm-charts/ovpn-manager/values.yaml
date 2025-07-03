@@ -109,3 +109,12 @@ templates:
   # Otherwise... let this build them for you!
   configMapSuffix: "-templates"
   files: {}
+
+optionsets:
+  mountPath: "/etc/ovpn-optionsets"
+  # If you already have a templates configMap, or want to define it outside this, then specify it here and define create to false.
+  configMap: ""
+  create: true
+  # Otherwise... let this build them for you!
+  configMapSuffix: "-optionsets"
+  files: {}

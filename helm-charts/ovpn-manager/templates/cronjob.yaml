@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "ovpn-manager.fullname" . }}-cleanup
+  name: job-cleanup-{{ include "ovpn-manager.fullname" . }}
   labels:
     {{- include "ovpn-manager.labels" . | nindent 4 }}
 spec:
