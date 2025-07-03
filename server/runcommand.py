@@ -59,9 +59,11 @@ class RunCommand:
 
         # If verbose mode is on, output the results and errors from the command execution
         if len(self.stdout) > 0:
-            self.logger.debug(f'stdout: {"\n".join(self.stdout)}')
+            stdout = "\n".join(self.stdout)
+            self.logger.debug(f'stdout: {stdout}')
         if len(self.stderr) > 0:
-            self.logger.debug(f'stderr: {"\n".join(self.stderr)}')
+            stderr = "\n".join(self.stderr)
+            self.logger.debug(f'stderr: {stderr}')
 
         # If it failed and we want to raise an exception on failure, record the command and args
         # then Raise Away!
