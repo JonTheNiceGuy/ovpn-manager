@@ -45,10 +45,11 @@ RUN chown -R appuser:appgroup /usr/src/app
 USER appuser
 
 # Set environment variables for Gunicorn
-ENV GUNICORN_CMD_ARGS="--bind=0.0.0.0:8000 --workers=3 --access-logfile - --error-logfile - --log-level info --logger-class server.logging.CustomGunicornLogger"
+ENV GUNICORN_LOG_LEVEL="info"
+ENV GUNICORN_CMD_ARGS="--bind=0.0.0.0:8000 --workers=3 --access-logfile - --error-logfile - --logger-class server.logging.CustomGunicornLogger"
 
 # Expose the port Gunicorn will run on
 EXPOSE 8000
 
 # The command to run the application
-CMD ["gunicorn", "server:create_app()"]
+CMD ["gunicorn", "--log-level", "${GUNICORN_LOG_LEVEL}", "server:create_app()"]

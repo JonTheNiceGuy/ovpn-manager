@@ -27,6 +27,8 @@ spec:
               containerPort: 8000
               protocol: TCP
           env:
+            - name: GUNICORN_LOGLEVEL
+              value: {{ .Values.gunicorn.logLevel | quote }}
             - name: OVPN_TEMPLATES_PATH
               value: {{ .Values.templates.mountPath | quote }}
             - name: OVPN_OPTIONSETS_PATH
