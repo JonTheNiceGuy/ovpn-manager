@@ -65,10 +65,14 @@ spec:
                 secretKeyRef:
                   name: {{ include "ovpn-manager.fullname" . }}
                   key: OIDC_ADMIN_GROUP
+            {{- if .Values.secrets.ca.crt }}
             - name: CA_CERT_PATH
               value: /etc/ca/ca.crt
+            {{- end }}
+            {{- if .Values.secrets.ca.key }}
             - name: CA_KEY_PATH
               value: /etc/ca/ca.key
+            {{- end }}
             {{- if or .Values.database.path (and .Values.database.type .Values.database.username .Values.database.password .Values.database.hostname .Values.database.database) }}
             - name: DATABASE_URL
               valueFrom: 
@@ -117,10 +121,14 @@ spec:
           secret:
             secretName: {{ include "ovpn-manager.fullname" . }}
             items:
+            {{- if .Values.secrets.ca.crt }}
             - key: ca.crt
               path: ca.crt
+            {{- end }}
+            {{- if .Values.secrets.ca.key }}
             - key: ca.key
               path: ca.key
+            {{- end }}
         - name: tmp-volume
           emptyDir: {}
         - name: instance-volume
