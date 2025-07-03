@@ -19,13 +19,21 @@ def app(test_ca, tmp_path_factory):
     test session, which is much more efficient.
     """
     templates_dir = tmp_path_factory.mktemp("ovpn_templates")
-    (templates_dir / "999.default.ovpn").write_text("default-template-for-{{ userinfo.sub }}\n{{ optionset }}")
-    (templates_dir / "000.engineering.ovpn").write_text("engineering-template-for-{{ userinfo.sub }}\n{{ optionset }}")
+    (templates_dir / "999.default.ovpn").write_text(
+        "{{ optionset }}\n"
+        "default-template-for-{{ userinfo.sub }}\n"
+        "proto {{protocol | default('udp')}}"
+    )
+    (templates_dir / "000.engineering.ovpn").write_text(
+        "{{ optionset }}\n"
+        "engineering-template-for-{{ userinfo.sub }}\n"
+        "proto {{protocol | default('udp')}}"
+    )
 
     optionsets_dir = tmp_path_factory.mktemp("ovpn_optionsets")
-    (optionsets_dir / "default.opts").write_text("proto udp")
-    (optionsets_dir / "UseTCP.opts").write_text("proto tcp-client")
-        
+    (optionsets_dir / "default.opts").write_text("{# This is the default, it sets nothing #}# Load default")
+    (optionsets_dir / "UseTCP.opts").write_text("{% set protocol = 'tcp-client' %}# Load TCP")
+
     os.environ["OVPN_TEMPLATES_PATH"] = str(templates_dir)
     os.environ["OVPN_OPTIONSETS_PATH"] = str(optionsets_dir)
     os.environ["FLASK_SECRET_KEY"] = "test-secret-key"

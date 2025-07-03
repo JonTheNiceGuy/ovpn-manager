@@ -32,7 +32,7 @@ def auth():
         token = oauth.oidc.authorize_access_token()
         user_info = normalize_userinfo(token.get('userinfo'))
     except Exception as e:
-        print(f"Authentication error: {e}")
+        current_app.logger.error(f"Authentication error: {e}")
         return redirect(url_for('main.error_page', message="Authentication failed."))
 
     if not user_info or not user_info.get('sub'):
@@ -54,7 +54,7 @@ def auth():
 
         optionset_name = session.pop('optionset', 'default')
         optionsets = current_app.config.get("OVPNS_OPTIONSETS", {})
-        optionset_content = optionsets.get(optionset_name, optionsets['default'])
+        optionset_content = optionsets.get(optionset_name, optionsets.get('default', ''))
 
         render_context = {
             "userinfo": user_info,
@@ -62,10 +62,13 @@ def auth():
             "device_cert_pem": device_cert_pem.decode('utf-8'),
             "ca_cert_pem": ca_cert_pem.decode('utf-8'),
             "common_name": common_name,
-            "optionset_name": optionset_name,
-            "optionset": optionset_content
+            "optionset": optionset_content,
+            "optionset_name": optionset_name
         }
-        ovpn_content = render_ovpn_template(user_info.get('groups', []), render_context)
+
+        user_groups = user_info.get('groups', [])
+        ovpn_content = render_ovpn_template(user_groups, render_context)
+
         encrypted_ovpn_content = fernet.encrypt(ovpn_content.encode('utf-8'))
 
         user_agent_string = request.headers.get('User-Agent', '')
@@ -98,5 +101,5 @@ def auth():
             return redirect(landing_url)
     except Exception as e:
         db.session.rollback()
-        print(f"Auth/Cert generation error: {e}")
+        current_app.logger.error(f"Auth/Cert generation error: {e}")
         return redirect(url_for('main.error_page', message="Could not generate configuration file."))

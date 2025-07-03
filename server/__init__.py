@@ -35,12 +35,12 @@ def create_app():
 
     # --- Load OVPN Templates and Optionsets ---
     app.config["OVPN_TEMPLATES_PATH"] = os.getenv("OVPN_TEMPLATES_PATH", "server/templates/ovpn")
-    app.config["OVPNS_TEMPLATES"] = load_ovpn_templates(app.config["OVPN_TEMPLATES_PATH"])
+    app.config["OVPNS_TEMPLATES"] = load_ovpn_templates(app)
     if not app.config["OVPNS_TEMPLATES"]:
         raise RuntimeError(f"No OVPN templates found in '{app.config['OVPN_TEMPLATES_PATH']}'.")
     
     app.config["OVPNS_OPTIONSETS_PATH"] = os.getenv("OVPN_OPTIONSETS_PATH", "server/optionsets")
-    app.config["OVPNS_OPTIONSETS"] = load_ovpn_optionsets(app.config["OVPNS_OPTIONSETS_PATH"])
+    app.config["OVPNS_OPTIONSETS"] = load_ovpn_optionsets(app)
     if not app.config["OVPNS_OPTIONSETS"]:
         raise RuntimeError(f"No OptionSets found in '{app.config['OVPNS_OPTIONSETS_PATH']}'.")
 

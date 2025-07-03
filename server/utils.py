@@ -1,7 +1,7 @@
 import os
 import jinja2
 from cryptography.fernet import Fernet
-from flask import current_app
+from flask import Flask, current_app
 from typing import Union, Dict, Any, List
 from .extensions import oauth
 from authlib.oidc.core.claims import UserInfo
@@ -41,10 +41,12 @@ def get_ca_certs():
             raise RuntimeError("CA_CERT_PATH and CA_KEY_PATH must be set and valid")
     return current_app.config['ca_certs']
 
-def load_ovpn_templates(path):
+def load_ovpn_templates(app: Flask):
     """Scans a directory for .ovpn template files and loads them in priority order."""
+    path = app.config.get("OVPN_TEMPLATES_PATH", "server/templates/ovpn")
+    app.logger.info(f"Loading OVPN templates from {path}")
     if not os.path.isdir(path):
-        print(f"WARNING: OVPN template path '{path}' not found or not a directory.")
+        app.logger.error(f"WARNING: OVPN template path '{path}' not found or not a directory.")
         return []
     
     loaded_templates = []
@@ -62,13 +64,14 @@ def load_ovpn_templates(path):
                 "priority": priority,
                 "group_name": group_name,
                 "file_name": filename,
-                "template": jinja2.Template(content)
+                "content": content
             })
-    
-    return sorted(loaded_templates, key=lambda x: x['priority'])
+    result = sorted(loaded_templates, key=lambda x: x['priority'])
+    app.logger.debug(f'Loaded templates: {result}')
+    return result
 
-def render_ovpn_template(user_groups, context):
-    """Finds the best matching template from the app config and renders it."""
+def render_ovpn_template(user_groups: List[str], context: Dict[str, Any]) -> str:
+    """Finds the best matching template and renders it with the given context."""
     templates = current_app.config.get("OVPNS_TEMPLATES", [])
     
     user_groups_lower = {group.lower() for group in (user_groups or [])}
@@ -85,31 +88,40 @@ def render_ovpn_template(user_groups, context):
             raise RuntimeError("OVPN template configuration error: no 'default' template found.")
         best_template_info = default_templates[0]
 
-    cn = context["common_name"]
-    print(f'For cert: {cn} use {best_template_info["file_name"]}')
-    return best_template_info['template'].render(context)
+    main_template_content = best_template_info['content']
+
+    # We will now use this content to build the final template.
+    optionset_name = context.get("optionset_name", "default")
+    optionsets = current_app.config.get("OVPNS_OPTIONSETS", {})
+    optionset_content = optionsets.get(optionset_name, optionsets.get('default', ''))
+
+    final_template_string = main_template_content.replace("{{ optionset }}", optionset_content)
+    final_template = jinja2.Template(final_template_string)
+    
+    current_app.logger.info(f"For cert: {context['common_name']} use {best_template_info['file_name']} with optionset {optionset_name}.opts")
+    
+    return final_template.render(context)
 
 def normalize_userinfo(raw_userinfo: Union[UserInfo, Dict[str, Any]]) -> Dict[str, Any]:
     """
     Takes a raw userinfo object (which supports .get()) and returns a
     clean, consistent dictionary containing only the claims we care about.
     """
-    if os.environ.get('DEBUG_USERINFO'):
-        for key, value in raw_userinfo.items():
-            print(f'userinfo: {key} -> {value}')
+    # for key, value in raw_userinfo.items():
+    current_app.logger.debug(f'userinfo: {raw_userinfo}')
 
     clean_data: Dict[str, Any] = dict(raw_userinfo)
-    
-    # Ensure 'groups' key always exists and is a list.
     clean_data['groups'] = clean_data.get('groups') or []
         
     return clean_data
 
-def load_ovpn_optionsets(path: str) -> Dict[str, str]:
+def load_ovpn_optionsets(app: Flask) -> Dict[str, str]:
     """Scans a directory for .opts files and loads their content."""
+    path = app.config.get("OVPNS_OPTIONSETS_PATH", "server/optionsets")
+    app.logger.info(f"Loading OVPN optionsets from {path}")
     optionsets = {}
     if not os.path.isdir(path):
-        print(f"WARNING: OVPN optionsets path '{path}' not found or not a directory.")
+        app.logger.error(f"WARNING: OVPN optionsets path '{path}' not found or not a directory.")
         return optionsets
     
     for filename in os.listdir(path):
@@ -123,5 +135,7 @@ def load_ovpn_optionsets(path: str) -> Dict[str, str]:
             
     if 'default' not in optionsets:
         raise RuntimeError(f"OVPN optionset configuration error: no 'default.opts' file found in '{path}'.")
+    
+    app.logger.debug(f"Loaded optionsets: {list(optionsets.keys())}")
         
     return optionsets
