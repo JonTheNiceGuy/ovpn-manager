@@ -24,8 +24,8 @@ def test_index_page_loads_for_authenticated_user(client):
     response = client.get('/')
     assert response.status_code == 200
     assert b"<h1>OVPN Manager</h1>" in response.data
-    assert b"Please use the client or an authorized link to download your configuration." in response.data
-    assert b"<a href=\"/login\">Login to get a new OVPN profile</a></p>" in response.data
+    assert b"Select your desired configuration options" in response.data
+    assert b'<input type="radio" id="option-default" name="optionset"' in response.data
 
 def test_nav_bar_shows_admin_link_when_user_is_not_admin(client, mocker):
     """
@@ -143,5 +143,5 @@ def test_error_page_is_rendered_on_auth_exception(client, mocker):
     
     # Assert we landed on the error page with the correct content and status
     assert response.status_code == 400
-    assert b"<h1>Error</h1>" in response.data
+    assert b"<h1>An Error Occurred</h1>" in response.data
     assert b"Authentication failed." in response.data # Check for the message we passed

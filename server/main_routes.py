@@ -1,4 +1,4 @@
-from flask import Blueprint, request, abort, Response, render_template_string, render_template, url_for, session, current_app, redirect
+from flask import Blueprint, request, abort, Response, render_template, url_for, session, current_app, redirect
 from .extensions import db
 from .models import DownloadToken
 from .utils import get_fernet
@@ -12,7 +12,9 @@ def index():
     if 'user' not in session:
         session['next_url'] = request.path
         return redirect(url_for('auth.login'))
-    return render_template('index.html', session=session, config=current_app.config)
+    
+    optionsets = current_app.config.get("OVPNS_OPTIONSETS", {})
+    return render_template('index.html', session=session, config=current_app.config, optionsets=optionsets)
 
 @main_bp.route('/download-landing/<token>')
 def download_landing(token):
@@ -59,9 +61,8 @@ def download():
 
 @main_bp.route('/error')
 def error_page():
-    # We will need the HTML_TEMPLATE here or define a proper template file
     message = request.args.get('message', 'An unknown error occurred.')
-    return f"<h1>Error</h1><p>{message}</p>", 400
+    return render_template('error.html', message=message), 400
 
 @main_bp.route('/healthz')
 def healthz():

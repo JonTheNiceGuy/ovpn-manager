@@ -21,7 +21,7 @@ class Config:
     of precedence: CLI > Environment > User Config > System Config > Default.
     """
 
-    def __init__(self, server_url_flag, output_flag, overwrite_flag, _user_config_path=None, _system_config_path=None):
+    def __init__(self, server_url_flag, output_flag, overwrite_flag, option_flag, _user_config_path=None, _system_config_path=None):
         # Allow paths to be injected for testing, otherwise use real paths
         self.user_config_path = _user_config_path if _user_config_path is not None else (Path.home() / ".config" / "ovpn-manager" / "config.yaml")
         self.system_config_path = _system_config_path if _system_config_path is not None else Path("/etc/ovpn-manager/config.yaml")
@@ -32,6 +32,7 @@ class Config:
         self.server_url = self._resolve_server_url(server_url_flag)
         self.output_path = self._resolve_output_path(output_flag)
         self.overwrite = self._resolve_overwrite_flag(overwrite_flag)
+        self.optionset = self._resolve_optionset(option_flag)
 
     def _load_config_file(self, path: Path):
         """Safely loads and parses a YAML file."""
@@ -91,6 +92,11 @@ class Config:
             return str(overwrite_str).lower() in ['true', '1', 't', 'y', 'yes']
             
         return False
+    
+    def _resolve_optionset(self, cli_arg): # <-- NEW METHOD
+        """Resolves the chosen optionset, defaulting to 'default'."""
+        optionset = self._resolve(cli_arg, 'OVPN_MANAGER_OPTIONSET', 'optionset')
+        return optionset or 'default'
 
 class CallbackHandler(BaseHTTPRequestHandler):
     """
@@ -132,9 +138,10 @@ def find_free_port():
 @click.option('-s', '--server-url', help='The base URL of the configuration server.')
 @click.option('-o', '--output', help='Path to save the OVPN configuration file.')
 @click.option('-f', '--force', '--overwrite', 'overwrite', is_flag=True, default=False, help='Overwrite the output file if it already exists.')
-def get_config(server_url, output, overwrite):
+@click.option('--option', 'optionset', help='The OVPN optionset to use (e.g., UseTCP).')
+def get_config(server_url, output, overwrite, optionset):
     try:
-        config = Config(server_url, output, overwrite)
+        config = Config(server_url, output, overwrite, optionset)
     except Exception as e:
         raise click.ClickException(f"Failed to initialize configuration: {e}")
 
@@ -155,7 +162,7 @@ def get_config(server_url, output, overwrite):
     server_thread.daemon = True
     server_thread.start()
 
-    login_url = f"{server_url}/login?cli_port={port}"
+    login_url = f"{server_url}/login?cli_port={port}&optionset={config.optionset}"
     click.echo("Your browser has been opened to complete authentication.")
     webbrowser.open(login_url)
 

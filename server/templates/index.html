@@ -4,6 +4,35 @@
 
 {% block content %}
     <h1>OVPN Manager</h1>
-    <p>Please use the client or an authorized link to download your configuration.</p>
-    <p><a href="{{ url_for('auth.login') }}">Login to get a new OVPN profile</a></p>
+    <p>Select your desired configuration options below and proceed to log in.</p>
+    
+    <form id="option-form" style="text-align: left; margin-top: 2em;">
+        <h3>Configuration Options</h3>
+        {% for name in optionsets.keys() | sort %}
+            <div>
+                <input type="radio" id="option-{{ name }}" name="optionset" value="{{ name }}" {% if name == 'default' %}checked{% endif %}>
+                <label for="option-{{ name }}">{{ name }}</label>
+            </div>
+        {% endfor %}
+    </form>
+
+    <p style="margin-top: 2em;">
+        <a id="login-link" href="{{ url_for('auth.login', optionset='default') }}" style="text-decoration: none; background-color: #0052cc; color: white; padding: 10px 20px; border-radius: 4px;">Login to Get OVPN Profile</a>
+    </p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('option-form');
+            const loginLink = document.getElementById('login-link');
+            
+            form.addEventListener('change', function(event) {
+                if (event.target.name === 'optionset') {
+                    const selectedOption = event.target.value;
+                    const newUrl = new URL(loginLink.href);
+                    newUrl.searchParams.set('optionset', selectedOption);
+                    loginLink.href = newUrl.href;
+                }
+            });
+        });
+    </script>
 {% endblock %}

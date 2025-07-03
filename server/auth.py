@@ -1,6 +1,6 @@
 import uuid
 import user_agents
-from flask import Blueprint, session, redirect, url_for, request, abort
+from flask import Blueprint, session, redirect, url_for, request, abort, current_app
 from .extensions import db, oauth, limiter
 from .models import DownloadToken
 from .cert_utils import create_device_certificate
@@ -12,6 +12,9 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login')
 @limiter.limit("20/minute")
 def login():
+    chosen_optionset = request.args.get('optionset', 'default')
+    session['optionset'] = chosen_optionset
+    
     cli_port = request.args.get('cli_port')
     if cli_port:
         try:
@@ -37,12 +40,10 @@ def auth():
 
     session['user'] = {'sub': user_info.get('sub'), 'groups': user_info.get('groups', [])}
     
-    # --- THIS IS THE NEW LOGIC ---
     # Check if we need to redirect the user back to a protected admin page
     next_url = session.pop('next_url', None)
     if next_url:
         return redirect(next_url)
-    # --- END NEW LOGIC ---
 
     # If no 'next_url', proceed with the standard OVPN generation flow
     try:
@@ -51,12 +52,18 @@ def auth():
         device_key_pem, device_cert_pem, common_name, cert_expiry = create_device_certificate(session['user']['sub'], ca_cert, ca_key)
         ca_cert_pem = ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
 
+        optionset_name = session.pop('optionset', 'default')
+        optionsets = current_app.config.get("OVPNS_OPTIONSETS", {})
+        optionset_content = optionsets.get(optionset_name, optionsets['default'])
+
         render_context = {
             "userinfo": user_info,
             "device_key_pem": device_key_pem.decode('utf-8'),
             "device_cert_pem": device_cert_pem.decode('utf-8'),
             "ca_cert_pem": ca_cert_pem.decode('utf-8'),
-            "common_name": common_name
+            "common_name": common_name,
+            "optionset_name": optionset_name,
+            "optionset": optionset_content
         }
         ovpn_content = render_ovpn_template(user_info.get('groups', []), render_context)
         encrypted_ovpn_content = fernet.encrypt(ovpn_content.encode('utf-8'))
@@ -76,6 +83,7 @@ def auth():
             cert_expiry=cert_expiry, # type: ignore
             user_agent_string=user_agent_string, # type: ignore
             detected_os=detected_os, # type: ignore
+            optionset_used=optionset_name, # type: ignore
             downloadable=True, # type: ignore
             collected=False # type: ignore
         )

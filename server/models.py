@@ -12,6 +12,7 @@ class DownloadToken(db.Model):
     cert_expiry = db.Column(db.DateTime(timezone=True), nullable=True)
     user_agent_string = db.Column(db.String(255), nullable=True)
     detected_os = db.Column(db.String(50), nullable=True)
+    optionset_used = db.Column(db.String(255), nullable=True)
     ovpn_content = db.Column(db.LargeBinary, nullable=True)
     downloadable = db.Column(db.Boolean, nullable=False, default=True)
     collected = db.Column(db.Boolean, nullable=False, default=False)

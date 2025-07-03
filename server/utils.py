@@ -104,3 +104,24 @@ def normalize_userinfo(raw_userinfo: Union[UserInfo, Dict[str, Any]]) -> Dict[st
     clean_data['groups'] = clean_data.get('groups') or []
         
     return clean_data
+
+def load_ovpn_optionsets(path: str) -> Dict[str, str]:
+    """Scans a directory for .opts files and loads their content."""
+    optionsets = {}
+    if not os.path.isdir(path):
+        print(f"WARNING: OVPN optionsets path '{path}' not found or not a directory.")
+        return optionsets
+    
+    for filename in os.listdir(path):
+        if not filename.endswith(".opts"):
+            continue
+        
+        # Key is the filename without extension, e.g., "UseTCP"
+        key = os.path.splitext(filename)[0]
+        with open(os.path.join(path, filename), 'r') as f:
+            optionsets[key] = f.read()
+            
+    if 'default' not in optionsets:
+        raise RuntimeError(f"OVPN optionset configuration error: no 'default.opts' file found in '{path}'.")
+        
+    return optionsets

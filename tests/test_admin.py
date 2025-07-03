@@ -5,28 +5,41 @@ from datetime import datetime, timezone, timedelta
 OIDC_CLIENT_PATH = 'server.extensions.oauth.oidc'
 
 def test_admin_page_is_forbidden_for_normal_user(client, mocker):
-    """Tests that a user NOT in the admin group receives a 403 Forbidden."""
+    """
+    Tests that a user who is NOT in the admin group receives a 403 Forbidden.
+    """
     mock_authorize_access_token = mocker.patch(f'{OIDC_CLIENT_PATH}.authorize_access_token')
+    
+    # Use a simple dictionary for the mock - our app now handles this correctly.
     mock_authorize_access_token.return_value = {
         'userinfo': {'sub': 'auth|normal-user', 'groups': ['some-other-group']}
     }
+
     with client:
-        client.get('/auth')
-        response = client.get('/admin/status')
+        client.get('/auth') # Log in the non-admin user
+        response = client.get('/admin/status', follow_redirects=True)
+        
+        # Assert we land on our user-friendly 403 page
         assert response.status_code == 403
         assert b"Access Forbidden" in response.data
 
 def test_admin_page_is_accessible_for_admin_user(client, mocker):
-    """Tests that a user who IS in the admin group receives a 200 OK."""
+    """
+    Tests that a user who IS in the admin group receives a 200 OK.
+    """
     mock_authorize_access_token = mocker.patch(f'{OIDC_CLIENT_PATH}.authorize_access_token')
+
+    # Use a simple dictionary for the mock
     mock_authorize_access_token.return_value = {
         'userinfo': {'sub': 'auth|admin-user', 'groups': ['vpn-admins']}
     }
+    
     with client:
-        client.get('/auth')
+        client.get('/auth') # Log in the admin user
         response = client.get('/admin/status')
+        
         assert response.status_code == 200
-        assert b"Token Issuance Status" in response.data
+        assert b"<h1>Token Issuance Status</h1>" in response.data
 
 def test_admin_page_filtering(client, app, mocker):
     """

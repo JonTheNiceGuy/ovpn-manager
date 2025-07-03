@@ -9,7 +9,7 @@ from .main_routes import main_bp
 from .auth import auth_bp
 from .admin import admin_bp
 from .tasks import tasks_bp
-from .utils import load_ovpn_templates
+from .utils import load_ovpn_templates, load_ovpn_optionsets
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -17,7 +17,7 @@ def create_app():
     
     # --- Load Configuration ---
     app.secret_key = os.getenv("FLASK_SECRET_KEY")
-    app.config["OIDC_ADMIN_GROUP"] = os.getenv("OIDC_ADMIN_GROUP")
+    app.config["OIDC_ADMIN_GROUP"] = os.getenv("OIDC_ADMIN_GROUP", 'ovpn-manager-admins')
 
     # --- Load Database Settings ---
     db_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(app.instance_path, 'app.db')}")
@@ -33,11 +33,16 @@ def create_app():
     app.config["SESSION_PERMANENT"] = True
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 
-    # --- Load OVPN Templates ---
-    template_path = os.getenv("OVPN_TEMPLATES_PATH", "server/templates/ovpn")
-    app.config["OVPNS_TEMPLATES"] = load_ovpn_templates(template_path)
+    # --- Load OVPN Templates and Optionsets ---
+    app.config["OVPN_TEMPLATES_PATH"] = os.getenv("OVPN_TEMPLATES_PATH", "server/templates/ovpn")
+    app.config["OVPNS_TEMPLATES"] = load_ovpn_templates(app.config["OVPN_TEMPLATES_PATH"])
     if not app.config["OVPNS_TEMPLATES"]:
-        raise RuntimeError(f"No OVPN templates found in '{template_path}'.")
+        raise RuntimeError(f"No OVPN templates found in '{app.config['OVPN_TEMPLATES_PATH']}'.")
+    
+    app.config["OVPNS_OPTIONSETS_PATH"] = os.getenv("OVPN_OPTIONSETS_PATH", "server/optionsets")
+    app.config["OVPNS_OPTIONSETS"] = load_ovpn_optionsets(app.config["OVPNS_OPTIONSETS_PATH"])
+    if not app.config["OVPNS_OPTIONSETS"]:
+        raise RuntimeError(f"No OptionSets found in '{app.config['OVPNS_OPTIONSETS_PATH']}'.")
 
     # --- Initialize Extensions (in the correct order) ---
     db.init_app(app)
