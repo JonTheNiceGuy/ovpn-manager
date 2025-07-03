@@ -24,7 +24,7 @@ def test_index_page_loads_for_authenticated_user(client):
     response = client.get('/')
     assert response.status_code == 200
     assert b"<h1>OVPN Manager</h1>" in response.data
-    assert b"Select your desired configuration options" in response.data
+    assert b"Click here for advanced options" in response.data
     assert b'<input type="radio" id="option-default" name="optionset"' in response.data
 
 def test_nav_bar_shows_admin_link_when_user_is_not_admin(client, mocker):
