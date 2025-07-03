@@ -97,21 +97,23 @@ def render_ovpn_template(user_groups: List[str], context: Dict[str, Any]) -> str
     optionsets = current_app.config.get("OVPNS_OPTIONSETS", {})
     optionset_content = optionsets.get(optionset_name, optionsets.get('default', ''))
 
+    current_app.logger.info(f"For cert: {context['common_name']} use {best_template_info['file_name']} with optionset {optionset_name}.opts")
+
     current_app.logger.debug(f'Loaded optionset pre-render is:')
     current_app.logger.debug(optionset_content)
 
-    final_template_string = main_template_content.replace("{{ optionset }}", optionset_content)
+    final_template_string = optionset_content + "\n" + main_template_content
 
     current_app.logger.debug(f'Combined pre-render template is:')
     current_app.logger.debug(final_template_string)
+
     final_template = jinja2.Template(final_template_string)
+    rendered_template = final_template.render(context)
 
     current_app.logger.debug(f'Rendered Output is:')
-    current_app.logger.debug(final_template)    
+    current_app.logger.debug(rendered_template)    
     
-    current_app.logger.info(f"For cert: {context['common_name']} use {best_template_info['file_name']} with optionset {optionset_name}.opts")
-    
-    return final_template.render(context)
+    return rendered_template
 
 def normalize_userinfo(raw_userinfo: Union[UserInfo, Dict[str, Any]]) -> Dict[str, Any]:
     """

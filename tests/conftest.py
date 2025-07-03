@@ -20,12 +20,10 @@ def app(test_ca, tmp_path_factory):
     """
     templates_dir = tmp_path_factory.mktemp("ovpn_templates")
     (templates_dir / "999.default.ovpn").write_text(
-        "{{ optionset }}\n"
         "default-template-for-{{ userinfo.sub }}\n"
         "proto {{protocol | default('udp')}}"
     )
     (templates_dir / "000.engineering.ovpn").write_text(
-        "{{ optionset }}\n"
         "engineering-template-for-{{ userinfo.sub }}\n"
         "proto {{protocol | default('udp')}}"
     )
