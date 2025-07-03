@@ -4,7 +4,7 @@ from flask import Blueprint, session, redirect, url_for, request, abort, current
 from .extensions import db, oauth, limiter
 from .models import DownloadToken
 from .cert_utils import create_device_certificate
-from .utils import get_fernet, get_ca_certs, render_ovpn_template, normalize_userinfo
+from .utils import get_fernet, get_ca_certs, render_ovpn_template, normalize_userinfo, get_tlscrypt_key
 from cryptography.hazmat.primitives import serialization
 
 auth_bp = Blueprint('auth', __name__)
@@ -51,6 +51,7 @@ def auth():
         ca_cert, ca_key = get_ca_certs()
         device_key_pem, device_cert_pem, common_name, cert_expiry = create_device_certificate(session['user']['sub'], ca_cert, ca_key)
         ca_cert_pem = ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
+        tlscrypt_type, tlscrypt_key = get_tlscrypt_key(device_cert_pem.decode('utf-8'))
 
         optionset_name = session.pop('optionset', 'default')
         optionsets = current_app.config.get("OVPNS_OPTIONSETS", {})
@@ -63,7 +64,9 @@ def auth():
             "ca_cert_pem": ca_cert_pem.decode('utf-8'),
             "common_name": common_name,
             "optionset": optionset_content,
-            "optionset_name": optionset_name
+            "optionset_name": optionset_name,
+            "tlscrypt_key": tlscrypt_key,
+            "tlscrypt_type": tlscrypt_type
         }
 
         user_groups = user_info.get('groups', [])

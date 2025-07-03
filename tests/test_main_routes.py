@@ -1,7 +1,9 @@
+import os
 from urllib.parse import urlparse
 from server.extensions import db
 from server.models import DownloadToken
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 OIDC_CLIENT_PATH = 'server.extensions.oauth.oidc'
 
@@ -145,3 +147,41 @@ def test_error_page_is_rendered_on_auth_exception(client, mocker):
     assert response.status_code == 400
     assert b"<h1>An Error Occurred</h1>" in response.data
     assert b"Authentication failed." in response.data # Check for the message we passed
+
+def test_tlscrypt_key_is_injected(client, app, mocker, fs):
+    """
+    Tests that a V1 tlscrypt key is correctly read and rendered into the template.
+    """
+    OIDC_CLIENT_PATH = 'server.extensions.oauth.oidc'
+    
+    # 1. Setup a mock V1 key file and update the environment
+    key_path = "/etc/openvpn/tls.key"
+    fs.create_file(key_path, contents="-----BEGIN OpenVPN Static key V1-----\nkey-data\n-----END OpenVPN Static key V1-----")
+    mocker.patch.dict(os.environ, {"TLSCRYPT_KEY_PATH": key_path})
+    
+    # 2. Update the default template to use the new variable
+    # We get the templates dir path from the app fixture config
+    templates_dir = Path(app.config.get("OVPN_TEMPLATES_PATH"))
+    fs.create_dir(templates_dir)
+    (templates_dir / "999.default.ovpn").write_text("tls-crypt\n<tls-crypt>\n{{ tlscrypt_key }}\n</tls-crypt>")
+
+    # 3. Mock the OIDC login
+    mock_authorize_access_token = mocker.patch(f'{OIDC_CLIENT_PATH}.authorize_access_token')
+    mock_authorize_access_token.return_value = {
+        'userinfo': {'sub': 'auth|tls-user', 'groups': []}
+    }
+
+    # 4. Run the auth flow
+    with client:
+        auth_response = client.get('/auth')
+        assert auth_response.status_code == 302
+        redirect_url_path = urlparse(auth_response.location).path
+        token_str = redirect_url_path.split('/')[-1]
+
+    # 5. Decrypt the content and verify the key is present
+    with app.app_context():
+        from server.utils import get_fernet
+        token_record = db.session.query(DownloadToken).filter_by(token=token_str).first()
+        decrypted_content = get_fernet().decrypt(token_record.ovpn_content).decode('utf-8')
+        
+        assert "key-data" in decrypted_content

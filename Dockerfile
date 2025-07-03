@@ -18,9 +18,9 @@ FROM ${IMAGE_REPO}:${IMAGE_TAG}
 RUN groupadd --system --gid 1001 appgroup && \
     useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
-# Install Python
+# Install Python and OpenVPN
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip libpq5 && \
+    apt-get install -y python3 python3-pip libpq5 openvpn && \
     rm -rf /var/lib/apt/lists/*
 # Note: libpq5 is the runtime library for psycopg2
 

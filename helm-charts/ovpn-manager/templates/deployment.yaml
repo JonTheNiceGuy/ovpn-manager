@@ -73,6 +73,10 @@ spec:
             - name: CA_KEY_PATH
               value: /etc/ca/ca.key
             {{- end }}
+            {{- if .Values.secrets.tlscrypt.key }}
+            - name: TLSCRYPT_KEY_PATH
+              value: /etc/ca/tlscrypt.key
+            {{- end }}
             {{- if or .Values.database.path (and .Values.database.type .Values.database.username .Values.database.password .Values.database.hostname .Values.database.database) }}
             - name: DATABASE_URL
               valueFrom: 
@@ -128,6 +132,10 @@ spec:
             {{- if .Values.secrets.ca.key }}
             - key: ca.key
               path: ca.key
+            {{- end }}
+            {{- if .Values.secrets.tlscrypt.key }}
+            - key: tlscrypt.key
+              path: tlscrypt.key
             {{- end }}
         - name: tmp-volume
           emptyDir: {}

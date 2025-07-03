@@ -1,10 +1,13 @@
 import os
 import jinja2
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from cryptography.fernet import Fernet
 from flask import Flask, current_app
 from typing import Union, Dict, Any, List
 from .extensions import oauth
 from authlib.oidc.core.claims import UserInfo
+from .runcommand import RunCommand
 
 def get_fernet():
     """Gets the Fernet instance, creating it if it doesn't exist on the app context."""
@@ -40,6 +43,93 @@ def get_ca_certs():
         except (KeyError, FileNotFoundError):
             raise RuntimeError("CA_CERT_PATH and CA_KEY_PATH must be set and valid")
     return current_app.config['ca_certs']
+
+def get_tlscrypt_key(device_cert: str) -> tuple[int | None, str | None]:
+    """
+    Reads a tls-crypt key file and returns the key type and content.
+    For V2 keys, it generates the client-specific key.
+    """
+    tlscrypt_key_path = os.environ.get("TLSCRYPT_KEY_PATH")
+    if not tlscrypt_key_path:
+        return None, None
+
+    try:
+        with open(tlscrypt_key_path, "r") as f:
+            key_content = f.read()
+    except FileNotFoundError:
+        raise RuntimeError(f"TLSCRYPT_KEY_PATH '{tlscrypt_key_path}' does not exist")
+
+    if key_content.startswith('-----BEGIN OpenVPN Static key V1-----'):
+        return 1, key_content
+    elif key_content.startswith('-----BEGIN OpenVPN tls-crypt-v2 server key-----'):
+        from .runcommand import RunCommand # Local import
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as d:
+            temp_filename = Path(d) / 'cert.pem'
+            
+            # Pass the logger from the current app context to RunCommand
+            RunCommand(
+                [
+                    "openvpn",
+                    "--tls-crypt-v2", tlscrypt_key_path,
+                    "--genkey", "tls-crypt-v2-client",
+                    str(temp_filename)
+                ],
+                raise_on_error=True,
+                logger=current_app.logger
+            )
+            with open(temp_filename, 'r') as f:
+                client_key = f.read()
+            return 2, client_key.strip()
+    else:
+        raise RuntimeError('TLSCRYPT_KEY is not valid')
+
+# def get_tlscrypt_key(device_cert):
+#     tlscrypt_key_path = os.environ.get("TLSCRYPT_KEY_PATH", None)
+#     this_tlscrypt_key = None
+#     if tlscrypt_key_path:
+#         if 'tlscrypt_key' in current_app.config: # This stores the V1 key which is the same between client and server
+#             this_tlscrypt_key = current_app.config.get('tlscrypt_key')
+#         else:
+#             if 'tlscrypt_server_key' in current_app.config: # This stores the V2 Server key
+#                 tlscrypt_key = current_app.config.get('tlscrypt_server_key')
+#             else:
+#                 try:
+#                     tlscrypt_key_path = os.environ["TLSCRYPT_KEY_PATH"]
+#                     with open(tlscrypt_key_path, "r") as f:
+#                         tlscrypt_key = f.read()
+#                 except (FileNotFoundError):
+#                     raise RuntimeError("TLSCRYPT_KEY_PATH must exist")
+
+#             # The file we loaded is either a V1 or V2 key, or something else
+#             if str(tlscrypt_key).startswith('-----BEGIN OpenVPN Static key V1-----'):
+#                 current_app.config['tlscrypt_type']=1
+#                 current_app.config['tlscrypt_key'] = tlscrypt_key
+#                 this_tlscrypt_key = tlscrypt_key
+
+#             elif str(tlscrypt_key).startswith('-----BEGIN OpenVPN tls-crypt-v2 server key-----'):
+#                 # We now need to generate the V2 Client key
+#                 current_app.config['tlscrypt_type']=2
+#                 with TemporaryDirectory() as d:
+#                     temp_filename = Path(d) / 'cert'
+#                     with open(temp_filename, 'w') as f:
+#                         f.write(device_cert)
+#                     get_client_key = RunCommand(
+#                         [
+#                             "openvpn",
+#                             "--genkey", "tls-crypt-v2-client",
+#                             os.environ["TLSCRYPT_KEY_PATH"], # Server Certificate
+#                             temp_filename                    # Client Certificate
+#                         ]
+#                     )
+#                 this_tlscrypt_key = "\n".join(get_client_key.stdout)
+
+#             else:
+#                 raise RuntimeError('TLSCRYPT_KEY is not valid')
+
+#     return current_app.config.get('tlscrypt_type', None), this_tlscrypt_key
 
 def load_ovpn_templates(app: Flask):
     """Scans a directory for .ovpn template files and loads them in priority order."""

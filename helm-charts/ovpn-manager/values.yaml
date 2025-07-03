@@ -69,6 +69,8 @@ secrets:
   ca:
     key: ""
     crt: ""
+  tlscrypt:
+    key: ""
 
 # Resource requests and limits
 resources: {}

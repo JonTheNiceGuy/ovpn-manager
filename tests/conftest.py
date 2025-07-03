@@ -21,11 +21,13 @@ def app(test_ca, tmp_path_factory):
     templates_dir = tmp_path_factory.mktemp("ovpn_templates")
     (templates_dir / "999.default.ovpn").write_text(
         "default-template-for-{{ userinfo.sub }}\n"
-        "proto {{protocol | default('udp')}}"
+        "proto {{protocol | default('udp')}}\n"
+        "{% if tlscrypt_key %}<tls-crypt>\n{{ tlscrypt_key }}\n</tls-crypt>{% endif %}"
     )
     (templates_dir / "000.engineering.ovpn").write_text(
         "engineering-template-for-{{ userinfo.sub }}\n"
-        "proto {{protocol | default('udp')}}"
+        "proto {{protocol | default('udp')}}\n"
+        "{% if tlscrypt_key %}<tls-crypt>\n{{ tlscrypt_key }}\n</tls-crypt>{% endif %}"
     )
 
     optionsets_dir = tmp_path_factory.mktemp("ovpn_optionsets")
